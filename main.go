@@ -14,6 +14,8 @@ import (
 const repoOwner = "01org"
 const repo = "ciao"
 
+var rcSHA = flag.String("head", "", "The sha of the release candidate")
+
 func main() {
 	flag.Parse()
 
@@ -37,6 +39,14 @@ func main() {
 	tc := oauth2.NewClient(oauth2.NoContext, ts)
 
 	client := github.NewClient(tc)
+
+	headCommit, _, _ := client.Repositories.GetCommit(repoOwner, repo, *rcSHA)
+	if headCommit == nil {
+		glog.Fatal("The SHA was not valid")
+		os.Exit(1)
+	}
+
+	rc := *headCommit.Commit.Committer.Date
 
 	release, _, _ := client.Repositories.GetLatestRelease(repoOwner, repo)
 
@@ -112,7 +122,9 @@ func main() {
 				eventsmap[key] = append(eventsmap[key], e)
 			} else {
 				if lastRelease.Before(*e.CreatedAt) {
-					eventsmap[key] = append(eventsmap[key], e)
+					if e.CreatedAt.Before(rc) {
+						eventsmap[key] = append(eventsmap[key], e)
+					}
 				}
 			}
 		}
@@ -130,6 +142,7 @@ func main() {
 
 	copts := github.CommitsListOptions{
 		Since: lastRelease,
+		Until: rc,
 	}
 
 	var commits []github.RepositoryCommit
