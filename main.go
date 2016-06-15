@@ -46,15 +46,40 @@ func main() {
 		os.Exit(1)
 	}
 
-	rc := *headCommit.Commit.Committer.Date
-
 	release, _, _ := client.Repositories.GetLatestRelease(repoOwner, repo)
+
+	var tags []github.RepositoryTag
+	var tagsOpts github.ListOptions
+
+	for {
+		t, resp, err := client.Repositories.ListTags(repoOwner, repo, &tagsOpts)
+		if err != nil {
+			glog.Fatal(err)
+		}
+
+		tags = append(tags, t...)
+
+		if resp.NextPage == 0 {
+			break
+		}
+
+		tagsOpts.Page = resp.NextPage
+	}
 
 	var lastRelease time.Time
 
-	if release != nil {
-		lastRelease = release.CreatedAt.Time
+	for _, t := range tags {
+		if *t.Name == *release.TagName {
+			c, _, _ := client.Repositories.GetCommit(repoOwner, repo, *t.Commit.SHA)
+			if c == nil {
+				glog.Fatal("The SHA was not valid")
+				os.Exit(1)
+			}
+			lastRelease = *c.Commit.Committer.Date
+		}
 	}
+
+	rc := *headCommit.Commit.Committer.Date
 
 	fmt.Fprintf(f, "Changes since last release\n\n")
 
