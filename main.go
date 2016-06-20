@@ -48,7 +48,7 @@ func main() {
 
 	release, _, _ := client.Repositories.GetLatestRelease(repoOwner, repo)
 
-	var tags []github.RepositoryTag
+	var tags []*github.RepositoryTag
 	var tagsOpts github.ListOptions
 
 	for {
@@ -83,7 +83,7 @@ func main() {
 
 	fmt.Fprintf(f, "Changes since last release\n\n")
 
-	var prs []github.PullRequest
+	var prs []*github.PullRequest
 
 	prOpts := github.PullRequestListOptions{
 		State: "closed",
@@ -107,10 +107,10 @@ func main() {
 
 	prmap := make(map[int]github.PullRequest)
 	for _, pr := range prs {
-		prmap[*pr.Number] = pr
+		prmap[*pr.Number] = *pr
 	}
 
-	var events []github.IssueEvent
+	var events []*github.IssueEvent
 	var eventOpts github.ListOptions
 
 	for {
@@ -128,7 +128,7 @@ func main() {
 		eventOpts.Page = resp.NextPage
 	}
 
-	eventsmap := make(map[string][]github.IssueEvent)
+	eventsmap := make(map[string][]*github.IssueEvent)
 
 	for _, e := range events {
 		key := *e.Event
@@ -170,7 +170,7 @@ func main() {
 		Until: rc,
 	}
 
-	var commits []github.RepositoryCommit
+	var commits []*github.RepositoryCommit
 	for {
 		c, resp, err := client.Repositories.ListCommits(repoOwner, repo, &copts)
 		if err != nil {
